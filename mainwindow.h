@@ -40,6 +40,13 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
+    int input_size;
+    int hidden_size;
+    int rate_size;
+    int output_size;
+    int epochs;
+
+
     PanelDBDialog *panelDialog;
     ProgressDialog *progressDialog;
     ModelSaveDialog *modelsaveDialog;
