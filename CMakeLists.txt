@@ -29,6 +29,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         paneldbdialog.h paneldbdialog.cpp paneldbdialog.ui
         progressdialog.h progressdialog.cpp progressdialog.ui
         modelsavedialog.h modelsavedialog.cpp modelsavedialog.ui
+        loadtrainingmodel.h loadtrainingmodel.cpp loadtrainingmodel.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET projet_apprentissage_supervise APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

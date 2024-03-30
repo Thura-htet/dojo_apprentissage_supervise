@@ -42,7 +42,7 @@ private:
 
     int input_size;
     int hidden_size;
-    int rate_size;
+    double learning_rate;
     int output_size;
     int epochs;
 

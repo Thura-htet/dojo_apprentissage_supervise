@@ -15,6 +15,16 @@
 #include <QtSql/QSqlRecord>
 #include <QDebug>
 
+double sigmoid(double x)
+{
+    return 1 / (1 + exp(-x));
+}
+
+double sigmoid_derivitive(double x)
+{
+    return x * (1 - x);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -40,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->rateSlider->setMaximum(99);
     ui->rateSlider->setValue(20);
     ui->nodesLabel->setText(QString("Rate : %1").arg(20));
-    this->rate_size = ui->rateSlider->value();
+    this->learning_rate = (double)ui->rateSlider->value()/100;
     connect(ui->rateSlider, &QSlider::valueChanged, this, &MainWindow::on_rateSlider_valueChanged);
 
     ui->labelDial->setText(QString("Epochs : "));
@@ -52,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->labelDial->setText(QString("Epochs : %1").arg(400000));
     QObject::connect(ui->dial, &QDial::valueChanged, [&](int value)
     {
-        EPOCHS = value;
+        this->epochs = value;
         ui->labelDial->setText(QString("Epochs : %1").arg(value));
     });
 
@@ -85,9 +95,10 @@ void MainWindow::on_rateSlider_valueChanged(int value)
 
 void MainWindow::on_trainButton_clicked()
 {
+    // progressDialog = new ProgressDialog(this);
     // DATABASE CONFIGURATION
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("C:\\Users\\SLAB45\\Documents\\dojo_models.db");
+    db.setDatabaseName("/Users/thura/projects/dojo_models.db");
 
 
     // DATABASE CONNECTION
@@ -100,7 +111,7 @@ void MainWindow::on_trainButton_clicked()
     int nRows = 0, nCols = 0;
     QSqlRecord record;
     query.setForwardOnly(false);
-    if (query.exec("SELECT * FROM model_training"))
+    if (query.exec("SELECT * FROM training_model"))
     {
         while (query.next()) {
             // Process the current row
@@ -142,7 +153,7 @@ void MainWindow::on_trainButton_clicked()
 
     qDebug()<<"Récupération des données sur table";
     int i = 0;
-    if (query.exec("SELECT * FROM model_training"))
+    if (query.exec("SELECT * FROM training_model"))
     {
         record = query.record();
         query.seek(0);
@@ -210,11 +221,12 @@ void MainWindow::on_trainButton_clicked()
     qDebug()<<"weights_ho[0][5] : "<<weights_ho[0][5];
 
     // LEARNING AND TRAINING LOGIC
-    for (int epoch; epoch<this->epochs; epoch++)
+    for (int epoch = 0; epoch<this->epochs; epoch++)
     {
+        qDebug() << "EPOCHS : " << epoch;
         for (int i = 0; i < nRows; i++)
         {
-            // PROPAGATION AVANT
+            // PROPAGATION AVANT (INPUT => HIDDEN)
             double *hidden = (double *)malloc(this->hidden_size*sizeof(double));
             for (int j = 0; j < this->hidden_size; j++)
             {
@@ -222,9 +234,44 @@ void MainWindow::on_trainButton_clicked()
                 for (int k = 0; k < this->input_size; k++)
                 {
                     // why [i][k]/[j][k] ?
-                    sum += matrixX[i][k] * weights_ih[]
+                    // for every row in the training model table i.e. matrixX[i]
+                    // you wanna perform calculation with relative to the same
+                    // row in weights_ih i.e. weights_ih[j]
+                    sum += matrixX[i][k] * weights_ih[j][k];
+                }
+                hidden[j] = sigmoid(sum);
+            }
+
+            // PROPAGATION AVANT (HIDDEN => OUTPUT)
+            double output = 0;
+            for (int j = 0; j < this->hidden_size; j++)
+            {
+                // i don't understand the concept of representing a network in terms of a matrix/table
+                output += hidden[j] * weights_ho[0][j];
+            }
+            output = sigmoid(output);
+
+            // CALCUL DE L'ERREUR
+            double error = matrixY[i] - output;
+
+            // RÉTROPROPAGATION (HIDDEN <= OUTPUT)
+            double d_output = error * sigmoid_derivitive(output);
+            for (int j = 0; j < this->hidden_size; j++)
+            {
+                weights_ho[0][j] += this->learning_rate * d_output * hidden[j];
+            }
+
+            // RÉTROPROPAGTION (INPUT <= INPUT)
+            for (int j = 0; j < this->hidden_size; j++)
+            {
+                double d_hidden = d_output * weights_ho[0][j] * sigmoid_derivitive(hidden[j]);
+                for (int k = 0; k < this->input_size; k++)
+                {
+                    weights_ih[j][k] = d_hidden * this->learning_rate * matrixX[i][k];
                 }
             }
+
+            free(hidden);
         }
     }
 
