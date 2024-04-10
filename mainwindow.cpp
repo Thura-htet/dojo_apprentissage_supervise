@@ -66,9 +66,9 @@ MainWindow::MainWindow(QWidget *parent)
         ui->labelDial->setText(QString("Epochs : %1").arg(value));
     });
 
-    connect(ui->trainButton, &QPushButton::clicked, this, &MainWindow::on_trainButton_clicked);
+    // connect(ui->trainButton, &QPushButton::clicked, this, &MainWindow::on_trainButton_clicked);
 
-    connect(ui->loadButton, &QPushButton::clicked, this, &MainWindow::on_loadButton_clicked);
+    // connect(ui->loadButton, &QPushButton::clicked, this, &MainWindow::on_loadButton_clicked);
 }
 
 MainWindow::~MainWindow()
@@ -327,7 +327,6 @@ void MainWindow::on_predictButton_clicked()
 
 void MainWindow::on_loadButton_clicked()
 {
-    qDebug() << "button clicked once";
     panelDialog = new PanelDBDialog(this);
     panelDialog->exec();
 }
@@ -335,7 +334,6 @@ void MainWindow::on_loadButton_clicked()
 
 void MainWindow::on_saveButton_clicked()
 {
-    qDebug() << "button clicked once";
     modelsaveDialog = new ModelSaveDialog(this);
     modelsaveDialog->exec();
 }
