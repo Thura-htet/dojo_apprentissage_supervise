@@ -67,6 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->trainButton, &QPushButton::clicked, this, &MainWindow::on_trainButton_clicked);
+
     connect(ui->loadButton, &QPushButton::clicked, this, &MainWindow::on_loadButton_clicked);
 }
 
@@ -95,11 +96,26 @@ void MainWindow::on_rateSlider_valueChanged(int value)
 
 void MainWindow::on_trainButton_clicked()
 {
+    double **GLOBALweights_ih = (double **)malloc(this->hidden_size * sizeof(double *));
+    for (int i = 0; i < this->hidden_size; i++)
+    {
+        GLOBALweights_ih[i] = (double *)malloc(this->input_size * sizeof(double));
+    }
+
+    double **GLOBALweights_ho = (double **)malloc(this->output_size * sizeof(double *));
+    for (int i = 0; i < this->output_size; i++)
+    {
+        GLOBALweights_ho[i] = (double *)malloc(this->hidden_size * sizeof(double));
+    }
+
     // progressDialog = new ProgressDialog(this);
     // DATABASE CONFIGURATION
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName("/Users/thura/projects/dojo_models.db");
 
+    // QSqlDatabase test = QSqlDatabase::addDatabase("QMYSQL");
+    // test.setHostName("localhost");
+    // test.setPort(8888);
 
     // DATABASE CONNECTION
     if (!db.open()) {
@@ -120,7 +136,6 @@ void MainWindow::on_trainButton_clicked()
             // int columnValue2 = query.value(1).toInt(); // Assuming column index 1
             nRows++;
         }
-        qDebug() << nRows;
 
         nCols = query.record().count();
     }
@@ -151,7 +166,6 @@ void MainWindow::on_trainButton_clicked()
         matrixTableViewTrain[i] = (double *)malloc((nCols) * sizeof(double));
     }
 
-    qDebug()<<"Récupération des données sur table";
     int i = 0;
     if (query.exec("SELECT * FROM training_model"))
     {
@@ -176,6 +190,9 @@ void MainWindow::on_trainButton_clicked()
             {
                 matrixTableViewTrain[i][j] = query.value(j).toDouble();
                 qDebug()<<"matrixTableViewTrain["<<i<<"]["<<j<<"] : " << matrixTableViewTrain[i][j];
+
+                QModelIndex index = ui->tableWidget->model()->index(i, j, QModelIndex());
+                ui->tableWidget->model()->setData(index, matrixTableViewTrain[i][j]);
             }
 
             i++;
@@ -205,7 +222,6 @@ void MainWindow::on_trainButton_clicked()
             weights_ih[i][j] = ((double)rand() / RAND_MAX) * 2 - 1;
         }
     }
-    qDebug()<<"weights_ih[5][8] : "<<weights_ih[5][8];
 
     // ADD RANDOM VALUES FOR HO LAYER
     for (int i=0; i<this->output_size; i++)
@@ -218,10 +234,9 @@ void MainWindow::on_trainButton_clicked()
             weights_ho[i][j] = ((double)rand() / RAND_MAX) * 2 - 1;
         }
     }
-    qDebug()<<"weights_ho[0][5] : "<<weights_ho[0][5];
 
     // LEARNING AND TRAINING LOGIC
-    for (int epoch = 0; epoch<this->epochs; epoch++)
+    for (int epoch = 0; epoch < this->epochs; epoch++)
     {
         qDebug() << "EPOCHS : " << epoch;
         for (int i = 0; i < nRows; i++)
@@ -259,6 +274,7 @@ void MainWindow::on_trainButton_clicked()
             for (int j = 0; j < this->hidden_size; j++)
             {
                 weights_ho[0][j] += this->learning_rate * d_output * hidden[j];
+                // qDebug() << "EPOCHS : " << epoch << "weights_ho[ 0 ][" << j << "]" << weights_ho[0][j];
             }
 
             // RÉTROPROPAGTION (INPUT <= INPUT)
@@ -267,11 +283,32 @@ void MainWindow::on_trainButton_clicked()
                 double d_hidden = d_output * weights_ho[0][j] * sigmoid_derivitive(hidden[j]);
                 for (int k = 0; k < this->input_size; k++)
                 {
-                    weights_ih[j][k] = d_hidden * this->learning_rate * matrixX[i][k];
+                    weights_ih[j][k] += d_hidden * this->learning_rate * matrixX[i][k];
+                    // qDebug() << "EPOCHS : " << epoch << "weights_ih[" << j << "][" << k << "]" << weights_ih[j][k];
                 }
             }
-
             free(hidden);
+        }
+    }
+
+    // RECOPIE DES TABLEAUX DE POIDS SOIT MON RESEAUX DE NEURONES EQUILIBRE
+    GLOBALweights_ho = weights_ho;
+    for (int i = 0; i < this->output_size; i++)
+    {
+        for (int j = 0; j < this->hidden_size; j++)
+        {
+            GLOBALweights_ho[i][j] = weights_ho[i][j];
+            qDebug() << "ho [" << i << "][" << j << "] : " << GLOBALweights_ho[i][j];
+        }
+    }
+
+    GLOBALweights_ih = weights_ih;
+    for (int i = 0; i < this->hidden_size; i++)
+    {
+        for (int j = 0; j < this->input_size; j++)
+        {
+            GLOBALweights_ih[i][j] = weights_ih[i][j];
+            qDebug() << "ih [" << i << "][" << j << "] : " << GLOBALweights_ih[i][j];
         }
     }
 
@@ -290,6 +327,7 @@ void MainWindow::on_predictButton_clicked()
 
 void MainWindow::on_loadButton_clicked()
 {
+    qDebug() << "button clicked once";
     panelDialog = new PanelDBDialog(this);
     panelDialog->exec();
 }
@@ -297,6 +335,7 @@ void MainWindow::on_loadButton_clicked()
 
 void MainWindow::on_saveButton_clicked()
 {
+    qDebug() << "button clicked once";
     modelsaveDialog = new ModelSaveDialog(this);
     modelsaveDialog->exec();
 }
